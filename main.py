@@ -40,40 +40,13 @@ def exec_command(cmd): # Launch a command
 	        value.append(a)
 	return value
 
-def speed_test(host,username,password,address):
-		# Configuración del router MikroTik
-		host = host
-		username = username
-		password = password
+def pretty_print_hostname(data):
+	if data['hostnames']:
+		print(f"🏠  {data['hostnames'][0]['name']}\n")
+	else:
+		print(f"❌ Not Found Hostname")
 
-		# Conexión al router MikroTik
-		api = connect(host=host, username=username, password=password)
-
-		# Ejecución del speed-test
-		result = api(cmd='/tool/speed-test', address=address, user=username, password=password, duration="30")
-		speed = []
-		data = {
-			"speed": speed,
-			"wan": address
-		}
-		for a in result:
-		    speed.append(a)
-		return speed
-
-#--------------------------------------------------------------#
-# OUTPUT generate by function analyze_json()                   #
-# If you want modify output, please check the function analyze #
-#--------------------------------------------------------------#
-
-def analyze_json_atp(data): # Generate Analyze ATP
-	pprint.pprint(data)
-	# Hostname
-	print('\n------------------- 𝓗𝓸𝓼𝓽𝓷𝓪𝓶𝓮 ----------------------- \n')
-	print(f"🏠  {data['hostnames'][0]['name']}\n")
-	
-
-	# IP address
-	print('\n------------------- 𝓘𝓟 𝓐𝓭𝓭𝓻𝓮𝓼𝓼 --------------------- \n')
+def pretty_print_ipaddress(data):
 	ip = []
 	ips_links = '^100\.113\.[0-9]{1,3}\.[0-9]{1,3}$'
 	ips_wan = '^100\.125\.[0-9]{1,3}\.[0-9]{1,3}$'
@@ -83,27 +56,26 @@ def analyze_json_atp(data): # Generate Analyze ATP
 		ips = a['address'].split('/')
 		ips = ips[0]
 		if re.match(ips_links,ips):
-			print(f'✅ IPs Radio: {ips}')
+			print(f"✅ IPs Radio: {ips} - {a['interface']}")
 		elif re.match(ips_customer,ips):
-			print(f'✅ IPs Customer: {ips}')
+			print(f"✅ IPs Customer: {ips} - {a['interface']}")
 		elif re.match(ips_wan,ips):
-			print(f'✅ IPs WAN: {ips}')
+			print(f"✅ IPs WAN: {ips} - {a['interface']}")
 		elif re.match(ips_lo, ips):
-			print(f'✅ IPs Lo0: {ips}')
-    
+			print(f"✅ IPs Lo0: {ips} -	{a['interface']}")
 
-    # Interfaces
-	print('\n------------------ 𝓘𝓷𝓽𝓮𝓻𝓯𝓪𝓬𝓮𝓼 ---------------------- \n')
+def pretty_print_interface(data):
 	inter = data['interface']
-	for a in inter:
-		if a['speed'] == '1Gbps' or a['speed'] == '10Gbps':
-			print(f"✅ Interface {a['name']} mtu {a['mtu']} {a['speed']} ")
-		else:
-			print(f"❌ Interface {a['name']} {a['speed']}")
+	if inter:
+		for a in inter:
+			if a['speed'] == '1Gbps' or a['speed'] == '10Gbps':
+				print(f"✅ Interface {a['name']} mtu {a['mtu']} {a['speed']} ")
+			else:
+				print(f"❌ Interface {a['name']} {a['speed']}")
+	else:
+		print('❌ Not Found Interface')
 
-
-	# Neighbors
-	print('\n------------------- 𝓝𝓮𝓲𝓰𝓱𝓫𝓸𝓻 ----------------------- \n')
+def pretty_print_neighbor(data):
 	neighbors = []
 	for a in data['neighbors']:
 		identity = a['identity']
@@ -115,19 +87,22 @@ def analyze_json_atp(data): # Generate Analyze ATP
 		else:
 			print(f'⚠️ Others: {fin_identity}')
 
-
-	# OSPF Neighbor
-	print('\n----------------------- 𝓞𝓢𝓟𝓕 ----------------------- \n')
+def pretty_print_ospf_neighbor(data):
 	wan = ''
 	count = 0
-	for a in data['ospf-neighbor']:
-		count += 1
-		wan = a['address']
-		print(f"✅ Neighbor: {a['address']} - {a['state']} - {a['adjacency']} - {a['interface']}")
+	if data['ospf-neighbor']:
+
+		for a in data['ospf-neighbor']:
+			count += 1
+			wan = a['address']
+			print(f"✅ Neighbor: {a['address']} - {a['state']} - {a['adjacency']} - {a['interface']}")
+	else:
+		print('❌ Not Found OSPF Neighbor')
+
+	return wan
 
 
-	# OSPF LSAs
-	print('\n----------------------- 𝓞𝓢𝓟𝓕 ----------------------- \n')
+def pretty_print_ospf_lsas(data):
 	default = []
 	for a in data['ospf']:
 		if a['id'] == '0.0.0.0':
@@ -159,101 +134,142 @@ def analyze_json_atp(data): # Generate Analyze ATP
 		print('❌ Not exist radius')
 
 
+def pretty_print_speed_test(data,wan):
+	if data['speed-test-core']:
+		speed = data['speed-test-core'][-1]
+
+
+		tcpdownload = data['speed-test-core'][-1]['tcp-download'].split(' ')[0]
+		tcpupload = data['speed-test-core'][-1]['tcp-upload'].split(' ')[0]
+
+		regex_Gbps = r"[0-9]+\.*[0-9]*Gbps"
+		regex_Mbps = r"[0-9]+\.*[0-9]*Mbps"
+		regex_bps = r"[0-9]+\.*[0-9]*bps"
+
+		if re.match(regex_Mbps, tcpdownload):
+			download = tcpdownload.split('Mbps')[0]
+			upload = tcpupload.split('Mbps')[0]
+			
+			if int(download) < 500 and int(upload) < 500:	# If Download < 500M 
+				print(f"✅ Address: 100.127.0.3")
+				print(f"❌ TCP Download: {tcpdownload}")
+				print(f"❌ TCP Upload: {tcpupload}")
+				print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+				print(f"✅ Ping: {speed['ping-min-avg-max']}")
+			else: 					# Else everything ok ...
+				print(f"✅ Address: 100.127.0.3")
+				print(f"✅ TCP Download: {tcpdownload}")
+				print(f"✅ TCP Upload: {tcpupload}")
+				print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+				print(f"✅ Ping: {speed['ping-min-avg-max']}")
+		elif re.match(regex_Mbps, tcpupload):
+			download = tcpdownload.split('Mbps')[0]
+			upload = tcpupload.split('Mbps')[0]
+
+			if int(download) < 500 and int(upload) < 500:	# If Download < 500M 
+				print(f"✅ Address: 100.127.0.3")
+				print(f"❌ TCP Download: {tcpdownload}")
+				print(f"❌ TCP Upload: {tcpupload}")
+				print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+				print(f"✅ Ping: {speed['ping-min-avg-max']}")
+			else: 					# Else everything ok ...
+				print(f"✅ Address: 100.127.0.3")
+				print(f"✅ TCP Download: {tcpdownload}")
+				print(f"✅ TCP Upload: {tcpupload}")
+				print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+				print(f"✅ Ping: {speed['ping-min-avg-max']}")
+		elif re.match(regex_bps, tcpdownload):
+			download = tcpdownload.split('Mbps')[0]
+			upload = tcpupload.split('Mbps')[0]
+			
+			print(f"✅ Address: 100.127.0.3")
+			print(f"❌ TCP Download: {tcpdownload}")
+			print(f"❌ TCP Upload: {tcpupload}")
+			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+			print(f"✅ Ping: {speed['ping-min-avg-max']}")
+		
+		elif re.match(regex_bps, tcpupload):
+			download = tcpdownload.split('Mbps')[0]
+			upload = tcpupload.split('Mbps')[0]
+
+			print(f"✅ Address: 100.127.0.3")
+			print(f"❌ TCP Download: {tcpdownload}")
+			print(f"❌ TCP Upload: {tcpupload}")
+			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+			print(f"✅ Ping: {speed['ping-min-avg-max']}")
+
+		elif re.match(regex_Gbps, tcpdownload):
+			print(f"✅ Address: 100.127.0.3")
+			print(f"✅ TCP Download: {tcpdownload}")
+			print(f"✅ TCP Upload: {tcpupload}")
+			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+			print(f"✅ Ping: {speed['ping-min-avg-max']}")
+		
+		elif re.match(regex_Gbps, tcpupload):
+			print(f"✅ Address: 100.127.0.3")
+			print(f"✅ TCP Download: {tcpdownload}")
+			print(f"✅ TCP Upload: {tcpupload}")
+			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
+			print(f"✅ Ping: {speed['ping-min-avg-max']}")
+	else:
+		print("❌ Not Work Speed-test")
+
+
+def speed_test(host,username,password,address):
+		# Configuración del router MikroTik
+		host = host
+		username = username
+		password = password
+
+		# Conexión al router MikroTik
+		api = connect(host=host, username=username, password=password)
+
+		# Ejecución del speed-test
+		result = api(cmd='/tool/speed-test', address=address, user=username, password=password, duration="30")
+		speed = []
+		data = {
+			"speed": speed,
+			"wan": address
+		}
+		for a in result:
+		    speed.append(a)
+		return speed
+
+#--------------------------------------------------------------#
+# OUTPUT generate by function analyze_json()                   #
+# If you want modify output, please check the function analyze #
+#--------------------------------------------------------------#
+
+def analyze_json_atp(data): # Generate Analyze ATP
+	# Hostname
+	print('\n--------------- Hostname --------------------- \n')
+	pretty_print_hostname(data)
+
+	# IP address
+	print('\n------------------- IP --------------------- \n')
+	pretty_print_ipaddress(data)
+    
+
+    # Interfaces
+	print('\n------------------ Interface ---------------------- \n')
+	pretty_print_interface(data)
+
+	# IP Neighbors
+	print('\n------------------- Neighbor ----------------------- \n')
+	pretty_print_neighbor(data)
+
+	# OSPF Neighbor
+	print('\n----------------------- OSPF ----------------------- \n')
+	pretty_print_ospf_neighbor(data)
+	wan = pretty_print_ospf_neighbor(data)
+
+	# OSPF LSAs
+	print('\n----------------------- OSPF ----------------------- \n')
+	pretty_print_ospf_lsas(data)
+	
 	#Speed-test
 	print('\n------------------- Speed-test WAN ------------------\n')
-	speed = data['speed-test'][-1]
-
-
-	tcpdownload = data['speed-test'][-1]['tcp-download'].split(' ')[0]
-	tcpupload = data['speed-test'][-1]['tcp-upload'].split(' ')[0]
-
-	regex_Gbps = r"[0-9]+\.*[0-9]*Gbps"
-	regex_Mbps = r"[0-9]+\.*[0-9]*Mbps"
-	regex_bps = r"[0-9]+\.*[0-9]*bps"
-
-	if re.match(regex_Mbps, tcpdownload):
-		download = tcpdownload.split('Mbps')[0]
-		upload = tcpupload.split('Mbps')[0]
-
-		
-		if int(download) < 500:	# If Download < 500M 
-			print(f"✅ Address: {wan}")
-			print(f"❌ TCP Download: {tcpdownload}")
-			print(f"✅ TCP Upload: {tcpupload}")
-			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-			print(f"✅ Ping: {speed['ping-min-avg-max']}")
-
-		elif int(upload) < 500: # If Upload < 500M
-			print(f"✅ Address: {wan}")
-			print(f"✅ TCP Download: {tcpdownload}")
-			print(f"❌ TCP Upload: {tcpupload}")
-			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-			print(f"✅ Ping: {speed['ping-min-avg-max']}")
-
-		else: 					# Else everything ok ...
-			print(f"✅ Address: {wan}")
-			print(f"✅ TCP Download: {tcpdownload}")
-			print(f"✅ TCP Upload: {tcpupload}")
-			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-			print(f"✅ Ping: {speed['ping-min-avg-max']}")
-	elif re.match(regex_Mbps, tcpupload):
-		download = tcpdownload.split('Mbps')[0]
-		upload = tcpupload.split('Mbps')[0]
-
-		if int(download) < 500:	# If Download < 500M 
-			print(f"✅ Address: {wan}")
-			print(f"❌ TCP Download: {tcpdownload}")
-			print(f"✅ TCP Upload: {tcpupload}")
-			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-			print(f"✅ Ping: {speed['ping-min-avg-max']}")
-
-		elif int(upload) < 500: # If Upload < 500M
-			print(f"✅ Address: {wan}")
-			print(f"✅ TCP Download: {tcpdownload}")
-			print(f"❌ TCP Upload: {tcpupload}")
-			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-			print(f"✅ Ping: {speed['ping-min-avg-max']}")
-			
-		else: 					# Else everything ok ...
-			print(f"✅ Address: {wan}")
-			print(f"✅ TCP Download: {tcpdownload}")
-			print(f"✅ TCP Upload: {tcpupload}")
-			print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-			print(f"✅ Ping: {speed['ping-min-avg-max']}")
-	elif re.match(regex_bps, tcpdownload):
-		download = tcpdownload.split('Mbps')[0]
-		upload = tcpupload.split('Mbps')[0]
-
-		print(f"✅ Address: {wan}")
-		print(f"❌ TCP Download: {tcpdownload}")
-		print(f"❌ TCP Upload: {tcpupload}")
-		print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-		print(f"✅ Ping: {speed['ping-min-avg-max']}")
-	
-	elif re.match(regex_bps, tcpupload):
-		download = tcpdownload.split('Mbps')[0]
-		upload = tcpupload.split('Mbps')[0]
-
-		print(f"✅ Address: {wan}")
-		print(f"❌ TCP Download: {tcpdownload}")
-		print(f"❌ TCP Upload: {tcpupload}")
-		print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-		print(f"✅ Ping: {speed['ping-min-avg-max']}")
-
-	elif re.match(regex_Gbps, tcpdownload):
-		print(f"✅ Address: {wan}")
-		print(f"✅ TCP Download: {tcpdownload}")
-		print(f"✅ TCP Upload: {tcpupload}")
-		print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-		print(f"✅ Ping: {speed['ping-min-avg-max']}")
-	
-	elif re.match(regex_Gbps, tcpupload):
-		print(f"✅ Address: {wan}")
-		print(f"✅ TCP Download: {tcpdownload}")
-		print(f"✅ TCP Upload: {tcpupload}")
-		print(f"✅ Jitter {speed['jitter-min-avg-max']}")
-		print(f"✅ Ping: {speed['ping-min-avg-max']}")
-
+	pretty_print_speed_test(data,wan)
 
 	print('\n----- Script Generated by Eirikr -----\n')
 
@@ -275,7 +291,6 @@ try:
 	radius  = exec_command(cmd='/radius/print')
 	ospf_lsa  = exec_command(cmd='/routing/ospf/lsa/print')
 	ospf_neighbor = exec_command(cmd='/routing/ospf/neighbor/print')
-	speed_test_wan = speed_test(conf['host'],conf['username'],conf['password'],ospf_neighbor[0]['address'])
 	speed_test_core = speed_test(conf['host'],conf['username'],conf['password'],'100.127.0.3')
 
 	# Filters 
@@ -297,7 +312,6 @@ try:
 	data['radius'] = radius
 	data['ospf-neighbor'] = ospf_neighbor
 	data['ospf'] = ospf_lsa
-	data['speed-test'] = speed_test_wan
 	data['speed-test-core'] = speed_test_core
 
 	# Generate ATP Analyze
@@ -307,3 +321,5 @@ except ConnectionRefusedError:
 	print('Please allow API Port ☕')
 except KeyboardInterrupt:
 	print('Bye ...')
+except librouteros.exceptions.TrapError:
+	print('Bad Username or Password')
