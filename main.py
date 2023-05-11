@@ -8,8 +8,8 @@ import re
 host = input("🚧 Host: ")
 conf = {
 	"host": host,
-	"username":"erick.graterol",
-	"password":'EruditErick13$'
+	"username":"",
+	"password":''
 }
 
 
