@@ -34,10 +34,7 @@ def speed_test(host,username,password,address):
 		# Ejecución del speed-test
 		result = api(cmd='/tool/speed-test', address=address, user=username, password=password, duration="30")
 		speed = []
-		data = {
-			"speed": speed,
-			"wan": address
-		}
+
 		for a in result:
 		    speed.append(a)
 		return speed
@@ -109,7 +106,7 @@ def pretty_print_ospf_neighbor(data):
 		for a in data['ospf-neighbor']:
 			count += 1
 			wan = a['address']
-			print(f" Neighbor: {a['address']} - {a['state']} - {a['adjacency']} - {a['interface']}")
+			print(f"  Neighbor: {a['address']} - {a['state']} - {a['adjacency']} - {a['interface']}")
 	else:
 		print(' Not Found OSPF Neighbor')
 
@@ -269,12 +266,19 @@ def analyze_json_atp(data): # Generate Analyze ATP
 	print('\n--- OSPF LSAs --- \n')
 	pretty_print_ospf_lsas(data)
 	
-	#Speed-test
-	#print('\n--- Speed-test ---\n')
-	#pretty_print_speed_test(data,wan)
-
+	# Firmware
 	print('\n--- Firmware & Router ---\n')
 	pretty_print_routerboard(data)
+
+	
+	# Speed-test
+	print('\n--- Speed-test ---\n')
+	confirm = input('(Do you run speed-test?): ')
+	print('')
+	if confirm == 'yes' or confirm == 'y':
+		pretty_print_speed_test(data,wan)
+	else:
+		pass
 
 	print('\n--- Script By Team Red Rollout ---\n')
 
@@ -293,11 +297,11 @@ try:
 	interface = exec_command(cmd='/interface/ethernet/print')
 	ipaddress = exec_command(cmd='/ip/address/print')
 	neighbors = exec_command(cmd='/ip/neighbor/print')
-	radius  = exec_command(cmd='/radius/print')
-	ospf_lsa  = exec_command(cmd='/routing/ospf/lsa/print')
+	radius = exec_command(cmd='/radius/print')
+	ospf_lsa = exec_command(cmd='/routing/ospf/lsa/print')
 	ospf_neighbor = exec_command(cmd='/routing/ospf/neighbor/print')
 	routerboard = exec_command(cmd='/system/routerboard/print')
-	#speed_test_core = speed_test(conf['host'],conf['username'],conf['password'],'100.127.0.3')
+	speed_test_core = speed_test(conf['host'],conf['username'],conf['password'],'100.127.0.3')
 
 	# Filters 
 	hostname  = [{'name':el['name']} for el in hostnames]
@@ -319,7 +323,7 @@ try:
 	data['radius'] = radius
 	data['ospf-neighbor'] = ospf_neighbor
 	data['ospf'] = ospf_lsa
-	#data['speed-test-core'] = speed_test_core
+	data['speed-test-core'] = speed_test_core
 	data['routerboard'] = routerboard
 
 	# Generate ATP Analyze
