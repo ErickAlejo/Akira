@@ -83,8 +83,8 @@ def pretty_print_ipaddress(data):
 			possible_ip_b = '.'.join(possible_ip_b)
 
 			print(f" Links: {ips} ({a['interface']})")
-			print(f"   Links Possible 01 : {possible_ip_a}")
-			print(f"   Links Possible 02 : {possible_ip_b}")
+			print(f" - Links Possible 01 : {possible_ip_a}")
+			print(f" - Links Possible 02 : {possible_ip_b}")
 		elif re.match(ips_customer,ips):
 			print(f" Customers: {ips} ({a['interface']})")
 		elif re.match(ips_wan,ips):
@@ -243,10 +243,10 @@ def pretty_print_speed_test(data,wan):
 def pretty_print_routerboard(data):
 	if data['routerboard']:
 		for a in data['routerboard']:
-			print(f"Model: {a['model']}")
-			print(f"Factory: {a['factory-firmware']}")
-			print(f"Current: {a['current-firmware']}")
-			print(f"Upgrade: {a['upgrade-firmware']}")
+			print(f" Model: {a['model']}")
+			print(f" Factory: {a['factory-firmware']}")
+			print(f" Current: {a['current-firmware']}")
+			print(f" Upgrade: {a['upgrade-firmware']}")
 	else:
 		print('Not Found Routerboard')
 
