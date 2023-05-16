@@ -68,12 +68,23 @@ def pretty_print_ipaddress(data):
 	ips_links = '^100\.113\.[0-9]{1,3}\.[0-9]{1,3}$'
 	ips_wan = '^100\.125\.[0-9]{1,3}\.[0-9]{1,3}$'
 	ips_lo = '^100\.127\.[0-9]{1,3}\.[0-9]{1,3}$'
-	ips_customer = '^100\.[0-9]{1,3}\.[0-9]{1,3}\.1$'
+	ips_customer = '^100\.[0-9]{1,3}\.[0-9]{1,3}\.0$'
 	for a in data['ipaddress']:
-		ips = a['address'].split('/')
-		ips = ips[0]
+		ips = a['network']
 		if re.match(ips_links,ips):
+			possible_ip_a = ips.split('.')
+			new_a = int(possible_ip_a[-1]) + 2
+			possible_ip_a[-1] = str(new_a)
+			possible_ip_a = '.'.join(possible_ip_a) 
+
+			possible_ip_b = ips.split('.')
+			new_b = int(possible_ip_b[-1]) + 3
+			possible_ip_b[-1] = str(new_b)
+			possible_ip_b = '.'.join(possible_ip_b)
+
 			print(f" Links: {ips} ({a['interface']})")
+			print(f"   Links Possible 01 : {possible_ip_a}")
+			print(f"   Links Possible 02 : {possible_ip_b}")
 		elif re.match(ips_customer,ips):
 			print(f" Customers: {ips} ({a['interface']})")
 		elif re.match(ips_wan,ips):
@@ -95,8 +106,11 @@ def pretty_print_interface(data):
 def pretty_print_neighbor(data):
 	neighbors = []
 	for a in data['neighbors']:
+		
 		identity = a['identity']
-		print(f"Neighbor: {identity}")
+		interface = a['interface']
+
+		print(f" Neighbor: ({interface}) {identity}")
 
 def pretty_print_ospf_neighbor(data):
 	wan = ''
@@ -106,7 +120,7 @@ def pretty_print_ospf_neighbor(data):
 		for a in data['ospf-neighbor']:
 			count += 1
 			wan = a['address']
-			print(f"  Neighbor: {a['address']} - {a['state']} - {a['adjacency']} - {a['interface']}")
+			print(f" Neighbor: {a['address']} - {a['state']} - {a['adjacency']} - {a['interface']}")
 	else:
 		print(' Not Found OSPF Neighbor')
 
@@ -241,6 +255,7 @@ def pretty_print_routerboard(data):
 
 def analyze_json_atp(data): # Generate Analyze ATP
 	# Hostname
+	pprint.pprint(data)
 	print('\n--- Hostname --- \n')
 	pretty_print_hostname(data)
 
@@ -273,13 +288,7 @@ def analyze_json_atp(data): # Generate Analyze ATP
 	
 	# Speed-test
 	print('\n--- Speed-test ---\n')
-	confirm = input('(Do you run speed-test?): ')
-	print('')
-	if confirm == 'yes' or confirm == 'y':
-		pretty_print_speed_test(data,wan)
-	else:
-		pass
-
+	pretty_print_speed_test(data,wan)
 	print('\n--- Script By Team Red Rollout ---\n')
 
 	
@@ -306,7 +315,7 @@ try:
 	# Filters 
 	hostname  = [{'name':el['name']} for el in hostnames]
 	interface = [{'name':el['name'],'speed':el['speed'],'mtu':el['mtu']} for el in interface]
-	ipaddress = [{'interface':el['interface'],'address':el['address']} for el in ipaddress]
+	ipaddress = [{'interface':el['interface'],'network':el['network']} for el in ipaddress]
 	neighbors = [{'interface':el['interface'],'identity':el['identity'],'mac-address':el['mac-address']} for el in neighbors]
 	radius = [{'comment':el['comment'],'address':el['address'],'src-address':el['src-address'],'protocol':el['protocol'],'service':el['service']} for el in radius]
 	ospf_lsa = [{'area':el['area'],'id':el['id'],'type':el['type'], 'originator':el['originator']} for el in ospf_lsa]
