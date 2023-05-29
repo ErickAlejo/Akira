@@ -255,7 +255,6 @@ def pretty_print_routerboard(data):
 
 def analyze_json_atp(data): # Generate Analyze ATP
 	# Hostname
-	pprint.pprint(data)
 	print('\n--- Hostname --- \n')
 	pretty_print_hostname(data)
 
